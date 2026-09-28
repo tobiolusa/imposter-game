@@ -1,3 +1,9 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c1221">
 <title>Imposter</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Righteous&family=Nunito:wght@400;600;700;800&display=swap">
 <style>
@@ -59,6 +65,7 @@
 }
 
 body {
+  margin: 0;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
@@ -438,36 +445,195 @@ p { margin: 0; line-height: 1.55 }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Standalone additions: inputs, room code, player numbers, connection state */
+.field { display: flex; flex-direction: column; gap: 6px }
+.field label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.input {
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--card);
+  border: 1.5px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 13px 16px;
+  min-height: 50px;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input:focus { border-color: var(--accent) }
+.input-code {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  text-align: center;
+  font-size: 1.4rem;
+}
+.join-row { display: flex; gap: 10px }
+.join-row .input { flex: 1; min-width: 0 }
+.join-row .btn { width: auto; flex-shrink: 0 }
+
+.or-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.or-divider::before, .or-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--card-border);
+}
+
+.room-code-card {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+.room-code {
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  letter-spacing: 0.25em;
+  padding-left: 0.25em;
+  color: var(--accent);
+}
+
+.player-num {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1.5px solid var(--accent);
+}
+.player-item.offline { opacity: 0.5 }
+.badge-offline { background: var(--card-border); color: var(--text-muted) }
+.kick-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+.kick-btn:hover { color: var(--danger) }
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding-top: 14px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+.game-header strong { color: var(--text) }
+
+.conn-banner {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 10;
+  background: var(--warning);
+  color: #1a2030;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 8px 16px;
+}
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 20;
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 10px 18px;
+  border-radius: 999px;
+  max-width: calc(100% - 32px);
+  text-align: center;
+}
 </style>
+</head>
+<body>
+<div id="conn-banner" class="conn-banner" hidden>Connection lost. Reconnecting...</div>
+<div id="toast" class="toast" hidden></div>
 
 <div id="app">
+
+  <div id="game-header" class="game-header" hidden>
+    <span>Room <strong id="header-code"></strong></span>
+    <span id="header-me"></span>
+  </div>
 
   <!-- Loading -->
   <div id="screen-loading" class="screen" style="align-items:center;justify-content:center">
     <h1 class="accent-text">IMPOSTER</h1>
-    <p class="subtitle pulse">Connecting...</p>
+    <p id="loading-msg" class="subtitle pulse">Loading...</p>
   </div>
 
   <!-- Error -->
   <div id="screen-error" class="screen" hidden style="align-items:center;justify-content:center">
     <h2 class="center">Cannot Join</h2>
     <p id="error-msg" class="subtitle"></p>
+    <button class="btn btn-ghost btn-sm" onclick="goHome()">Back</button>
   </div>
 
-  <!-- Home (no active game) -->
+  <!-- Home -->
   <div id="screen-home" class="screen" hidden>
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;min-height:160px">
       <h1 class="accent-text">IMPOSTER</h1>
       <p class="subtitle">Find the spy among your friends</p>
     </div>
-    <div class="info-box">
-      Everyone opens this page on their own phone. One player creates the game, others join. Each player sees their word privately.
+    <div class="field">
+      <label for="name-input">Your name</label>
+      <input id="name-input" class="input" maxlength="20" autocomplete="nickname" placeholder="Enter your name">
     </div>
-    <button id="btn-create" class="btn btn-primary" onclick="createGame()">Create Game</button>
+    <button class="btn btn-primary" onclick="createGame()">Create Game</button>
+    <div class="or-divider">or join a game</div>
+    <div class="join-row">
+      <input id="code-input" class="input input-code" maxlength="5" autocomplete="off"
+        autocapitalize="characters" spellcheck="false" placeholder="CODE">
+      <button class="btn btn-ghost" onclick="joinFromHome()">Join</button>
+    </div>
+    <div class="info-box">
+      Everyone opens this page on their own phone. One player creates a game and shares the code. Everyone else enters the code and their name to join.
+    </div>
   </div>
 
   <!-- Lobby -->
   <div id="screen-lobby" class="screen" hidden>
+    <div class="card room-code-card">
+      <span class="setting-label" style="color:var(--text-muted)">Game code</span>
+      <div id="lobby-code" class="room-code"></div>
+      <button class="btn btn-ghost btn-sm" onclick="shareCode()">Share invite link</button>
+    </div>
     <div class="center">
       <h2>Waiting for Players</h2>
       <p class="subtitle" id="lobby-count"></p>
@@ -518,7 +684,10 @@ p { margin: 0; line-height: 1.55 }
     <h3>Players</h3>
     <div id="discussion-players" class="player-list"></div>
     <div class="spacer"></div>
-    <button id="btn-ready-vote" class="btn btn-primary" onclick="markReady()">Ready to Vote</button>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button id="btn-ready-vote" class="btn btn-primary" onclick="markReady()">Ready to Vote</button>
+      <button id="btn-skip" class="btn btn-ghost btn-sm" onclick="skipToVote()" style="align-self:center" hidden>Skip to voting</button>
+    </div>
   </div>
 
   <!-- Voting -->
@@ -544,6 +713,7 @@ p { margin: 0; line-height: 1.55 }
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
 const WORD_PAIRS = [
   ["Beach","Pool"],["Guitar","Violin"],["Pizza","Pasta"],["Dog","Wolf"],
@@ -565,18 +735,55 @@ const WORD_PAIRS = [
 ];
 
 const TIMER_OPTS = [60, 90, 120, 180];
+const MIN_PLAYERS = 3;
+const MAX_PLAYERS = 16;
+// The host's PeerJS id is this prefix + the game code, so joiners can find it
+const PEER_PREFIX = 'imposter-tobiolusa-v1-';
+const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const CODE_LEN = 5;
 
-// State
-let db, room, user;
-let myId = null, myName = '', myAvatarUrl = '';
-let gameState = null;
-let profiles = {};
+// Storage (wrapped: private windows can throw)
+function load(key) { try { return JSON.parse(localStorage.getItem(key)) } catch(e) { return null } }
+function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)) } catch(e) {} }
+function forget(key) { try { localStorage.removeItem(key) } catch(e) {} }
+
+function randomId(len, chars) {
+  chars = chars || 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const buf = new Uint32Array(len);
+  crypto.getRandomValues(buf);
+  return Array.from(buf, n => chars[n % chars.length]).join('');
+}
+
+// Identity: a stable id per browser so refreshing keeps your seat and number
+let myId = load('imposter-id');
+if (typeof myId !== 'string' || !/^[a-z0-9]{12}$/.test(myId)) {
+  myId = randomId(12);
+  save('imposter-id', myId);
+}
+let myName = '';
+
+// Networking
+let peer = null;
+let conn = null;         // player: connection to host
+let conns = {};          // host: playerId -> connection
+let isHost = false;
+let game = null;         // host: authoritative game state
+let myCode = '';
+let everConnected = false;
+let leaving = false;
+let reconnectTimer = null;
+let joinTimeout = null;
+let hostTick = null;
+let hostRetries = 0;
+
+// View state (what this device renders)
+let view = null;
+let timerEnd = 0;
+let phaseKey = '';
 let selectedVote = null;
 let wordRevealed = false;
 let peekRevealed = false;
 let timerInterval = null;
-let timerDuration = 120;
-let canWrite = null;
 
 // Screens
 const screens = ['loading','error','home','lobby','reveal','discussion','voting','results'];
@@ -585,166 +792,639 @@ function showScreen(name) {
     const el = document.getElementById('screen-' + s);
     if (el) el.hidden = s !== name;
   });
+  document.getElementById('game-header').hidden = !view || ['loading','error','home'].includes(name);
+}
+
+function setLoading(msg) {
+  document.getElementById('loading-msg').textContent = msg;
+  showScreen('loading');
+}
+
+function setConnState(ok) {
+  document.getElementById('conn-banner').hidden = ok;
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true }, 3000);
+}
+
+function fail(msg) {
+  teardown();
+  forget('imposter-session');
+  document.getElementById('error-msg').textContent = msg;
+  showScreen('error');
+}
+
+function goHome() {
+  teardown();
+  forget('imposter-session');
+  history.replaceState(null, '', location.pathname);
+  document.getElementById('name-input').value = load('imposter-name') || '';
+  showScreen('home');
+}
+
+function teardown() {
+  clearTimeout(reconnectTimer); reconnectTimer = null;
+  clearTimeout(joinTimeout); joinTimeout = null;
+  clearInterval(hostTick); hostTick = null;
+  stopTimerTick();
+  if (peer) { try { peer.destroy() } catch(e) {} }
+  peer = null; conn = null; conns = {};
+  isHost = false; game = null; view = null;
+  everConnected = false; hostRetries = 0; phaseKey = '';
+  setConnState(true);
 }
 
 // Init
-async function init() {
-  try {
-    user = await claude.use('user');
-    db = await claude.use('db');
-    room = await claude.use('room');
-  } catch(e) { /* ignore */ }
+function init() {
+  const params = new URLSearchParams(location.search);
+  const urlCode = (params.get('code') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, CODE_LEN);
+  const session = load('imposter-session');
+  const savedName = load('imposter-name') || '';
+  document.getElementById('name-input').value = savedName;
 
-  if (!db || !user) {
-    document.getElementById('error-msg').textContent =
-      'This game needs all players to be signed in and part of the same organization. Make sure you are signed into Claude and have access to this artifact.';
-    showScreen('error');
+  if (!window.Peer) {
+    fail('Could not load the game networking library. Check your internet connection and reload.');
     return;
   }
 
-  myId = await user.id();
-  if (!myId) {
-    document.getElementById('error-msg').textContent =
-      'Could not identify you. Please make sure you are signed in.';
-    showScreen('error');
-    return;
-  }
-
-  const me = await user.me();
-  myName = me.name || 'Player';
-  myAvatarUrl = me.avatarUrl;
-
-  canWrite = await user.can('data.write');
-
-  // Set presence
-  if (room) {
-    room.presence({ status: 'online' }).catch(() => {});
-  }
-
-  // Subscribe to game state
-  db.doc('games/active').onSnapshot(async snap => {
-    if (snap.exists) {
-      gameState = snap.data();
-      await resolveProfiles();
-      render();
+  if (session && session.code && (!urlCode || urlCode === session.code)) {
+    myName = session.name;
+    if (session.role === 'host' && session.game) {
+      resumeHost(session);
     } else {
-      gameState = null;
-      render();
+      startPlayer(session.code, session.name);
     }
-  }, err => {
-    console.error('DB error:', err);
+    return;
+  }
+
+  forget('imposter-session');
+  if (urlCode) {
+    document.getElementById('code-input').value = urlCode;
+  }
+  showScreen('home');
+  if (urlCode && !savedName) document.getElementById('name-input').focus();
+}
+
+function readName() {
+  const name = document.getElementById('name-input').value.trim().replace(/\s+/g, ' ').slice(0, 20);
+  if (!name) {
+    toast('Enter your name first');
+    document.getElementById('name-input').focus();
+    return null;
+  }
+  save('imposter-name', name);
+  return name;
+}
+
+document.getElementById('code-input').addEventListener('input', e => {
+  e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, CODE_LEN);
+});
+document.getElementById('code-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') joinFromHome();
+});
+
+// ---------- Host ----------
+
+function createGame() {
+  const name = readName();
+  if (!name) return;
+  myName = name;
+  isHost = true;
+  game = {
+    code: randomId(CODE_LEN, CODE_CHARS),
+    hostId: myId,
+    phase: 'lobby',
+    players: { [myId]: { name, num: 1, online: true } },
+    round: 0,
+    timerDuration: 120,
+    ready: {},
+    votes: {}
+  };
+  setLoading('Creating game...');
+  startHostPeer(false);
+}
+
+function resumeHost(session) {
+  isHost = true;
+  game = session.game;
+  Object.keys(game.players).forEach(id => {
+    game.players[id].online = id === myId;
+  });
+  setLoading('Reopening game ' + game.code + '...');
+  startHostPeer(true);
+}
+
+function startHostPeer(resuming) {
+  myCode = game.code;
+  peer = new Peer(PEER_PREFIX + game.code);
+
+  peer.on('open', () => {
+    everConnected = true;
+    hostRetries = 0;
+    setConnState(true);
+    history.replaceState(null, '', location.pathname + '?code=' + game.code);
+    if (!hostTick) hostTick = setInterval(hostTickFn, 500);
+    broadcast();
+  });
+
+  peer.on('connection', c => {
+    c.on('data', msg => hostHandle(c, msg));
+    c.on('close', () => {
+      const id = c.playerId;
+      if (id && conns[id] === c) {
+        delete conns[id];
+        if (game && game.players[id]) {
+          game.players[id].online = false;
+          hostCheckAdvance();
+          broadcast();
+        }
+      }
+    });
+  });
+
+  peer.on('disconnected', () => {
+    if (peer && !peer.destroyed) {
+      setConnState(false);
+      setTimeout(() => { if (peer && !peer.destroyed) peer.reconnect() }, 1000);
+    }
+  });
+
+  peer.on('error', err => {
+    if (err.type === 'unavailable-id') {
+      try { peer.destroy() } catch(e) {}
+      if (resuming || everConnected) {
+        // Old connection for this code hasn't been released yet; retry
+        if (++hostRetries > 15) { fail('Could not reopen the game. Please create a new one.'); return; }
+        setTimeout(() => { if (isHost && game) startHostPeer(true) }, 2000);
+      } else {
+        game.code = randomId(CODE_LEN, CODE_CHARS);
+        startHostPeer(false);
+      }
+    } else if (['network','server-error','socket-error','socket-closed'].includes(err.type)) {
+      setConnState(false);
+    } else {
+      console.error('Peer error:', err);
+    }
   });
 }
 
-async function resolveProfiles() {
-  if (!gameState || !gameState.players) return;
-  const ids = Object.keys(gameState.players);
-  if (ids.length === 0) return;
-  try {
-    profiles = await user.profiles(ids);
-  } catch(e) { /* ignore */ }
+function hostTickFn() {
+  if (game && game.phase === 'discussion' && Date.now() >= game.timerEnd) {
+    hostCheckAdvance();
+    broadcast();
+  }
 }
 
-function render() {
-  if (!gameState) {
-    showScreen('home');
+function hostHandle(c, msg) {
+  if (!msg || typeof msg !== 'object' || !game) return;
+
+  if (msg.t === 'hello') {
+    const id = String(msg.id || '');
+    const name = String(msg.name || '').trim().replace(/\s+/g, ' ').slice(0, 20) || 'Player';
+    if (!/^[a-z0-9]{12}$/.test(id) || id === game.hostId) {
+      reject(c, 'Could not join this game.');
+      return;
+    }
+    const existing = game.players[id];
+    if (!existing) {
+      if (game.phase !== 'lobby') {
+        reject(c, 'This game has already started. Ask the host to let you in after this round.');
+        return;
+      }
+      if (Object.keys(game.players).length >= MAX_PLAYERS) {
+        reject(c, 'This game is full.');
+        return;
+      }
+      game.players[id] = { name, num: lowestFreeNumber(), online: true };
+    } else {
+      existing.online = true;
+      if (game.phase === 'lobby') existing.name = name;
+    }
+    if (conns[id] && conns[id] !== c) {
+      const old = conns[id];
+      old.playerId = null;
+      try { old.close() } catch(e) {}
+    }
+    c.playerId = id;
+    conns[id] = c;
+    broadcast();
     return;
   }
 
-  const phase = gameState.phase;
-  const amHost = gameState.hostId === myId;
-  const amPlayer = gameState.players && gameState.players[myId];
-  const playerIds = gameState.players ? Object.keys(gameState.players) : [];
-  const playerCount = playerIds.length;
+  if (c.playerId && game.players[c.playerId]) {
+    hostAction(c.playerId, msg);
+  }
+}
 
-  switch(phase) {
+function reject(c, message) {
+  const done = () => {
+    try { c.send({ t: 'error', msg: message }) } catch(e) {}
+    setTimeout(() => { try { c.close() } catch(e) {} }, 500);
+  };
+  if (c.open) done(); else c.on('open', done);
+}
+
+function lowestFreeNumber() {
+  const used = new Set(Object.values(game.players).map(p => p.num));
+  let n = 1;
+  while (used.has(n)) n++;
+  return n;
+}
+
+function hostAction(id, msg) {
+  const g = game;
+  if (!g || !g.players[id]) return;
+  const amH = id === g.hostId;
+
+  switch (msg.t) {
+    case 'ready':
+      if (g.phase === 'reveal' || g.phase === 'discussion') g.ready[id] = true;
+      break;
+    case 'vote':
+      if (g.phase === 'voting' && !g.votes[id] && g.players[msg.target] && msg.target !== id) {
+        g.votes[id] = msg.target;
+      }
+      break;
+    case 'leave':
+      if (!amH) {
+        if (g.phase === 'lobby' || g.phase === 'results') removePlayer(id);
+        else g.players[id].online = false;
+      }
+      break;
+    case 'kick':
+      if (amH && msg.target !== id && g.players[msg.target] && (g.phase === 'lobby' || g.phase === 'results')) {
+        const c = conns[msg.target];
+        if (c) { try { c.send({ t: 'kicked' }) } catch(e) {} }
+        removePlayer(msg.target);
+      }
+      break;
+    case 'timer':
+      if (amH && TIMER_OPTS.includes(msg.secs)) g.timerDuration = msg.secs;
+      break;
+    case 'start':
+      if (amH && g.phase === 'lobby') startRound();
+      break;
+    case 'skip':
+      if (amH && g.phase === 'discussion') { g.phase = 'voting'; g.votes = {}; g.ready = {} }
+      break;
+    case 'again':
+      if (amH && g.phase === 'results') {
+        g.phase = 'lobby';
+        g.wordPairIndex = null; g.wordFlip = null; g.imposterId = null; g.timerEnd = null;
+        g.ready = {}; g.votes = {};
+      }
+      break;
+  }
+  hostCheckAdvance();
+  broadcast();
+}
+
+function removePlayer(id) {
+  delete game.players[id];
+  delete game.ready[id];
+  delete game.votes[id];
+  const c = conns[id];
+  delete conns[id];
+  if (c) { c.playerId = null; setTimeout(() => { try { c.close() } catch(e) {} }, 300) }
+}
+
+function startRound() {
+  const g = game;
+  // Drop anyone who left the lobby before starting
+  Object.keys(g.players).forEach(id => { if (!g.players[id].online) removePlayer(id) });
+  const ids = Object.keys(g.players);
+  if (ids.length < MIN_PLAYERS) return;
+  g.phase = 'reveal';
+  g.round = (g.round || 0) + 1;
+  g.wordPairIndex = Math.floor(Math.random() * WORD_PAIRS.length);
+  g.wordFlip = Math.random() < 0.5;
+  g.imposterId = ids[Math.floor(Math.random() * ids.length)];
+  g.ready = {};
+  g.votes = {};
+}
+
+function hostCheckAdvance() {
+  const g = game;
+  const active = Object.keys(g.players).filter(id => g.players[id].online);
+  if (!active.length) return;
+  if (g.phase === 'reveal' && active.every(id => g.ready[id])) {
+    g.phase = 'discussion';
+    g.timerEnd = Date.now() + g.timerDuration * 1000;
+    g.ready = {};
+  }
+  if (g.phase === 'discussion' && (active.every(id => g.ready[id]) || Date.now() >= g.timerEnd)) {
+    g.phase = 'voting';
+    g.votes = {};
+    g.ready = {};
+  }
+  if (g.phase === 'voting' && active.every(id => g.votes[id])) {
+    g.phase = 'results';
+  }
+}
+
+function civilianWord() {
+  const pair = WORD_PAIRS[game.wordPairIndex];
+  return game.wordFlip ? pair[1] : pair[0];
+}
+function imposterWord() {
+  const pair = WORD_PAIRS[game.wordPairIndex];
+  return game.wordFlip ? pair[0] : pair[1];
+}
+
+// Each player only receives their own word; the imposter is revealed at results
+function buildView(pid) {
+  const g = game;
+  const v = {
+    code: g.code,
+    hostId: g.hostId,
+    phase: g.phase,
+    round: g.round,
+    timerDuration: g.timerDuration,
+    players: Object.entries(g.players)
+      .map(([id, p]) => ({ id, name: p.name, num: p.num, online: p.online }))
+      .sort((a, b) => a.num - b.num),
+    ready: g.ready,
+    voted: Object.fromEntries(Object.keys(g.votes).map(k => [k, true])),
+    myVote: g.votes[pid] || null
+  };
+  if (g.phase !== 'lobby' && g.wordPairIndex != null) {
+    v.myWord = pid === g.imposterId ? imposterWord() : civilianWord();
+  }
+  if (g.phase === 'discussion') v.timerRemaining = Math.max(0, g.timerEnd - Date.now());
+  if (g.phase === 'results') {
+    v.votes = g.votes;
+    v.imposterId = g.imposterId;
+    v.civilianWord = civilianWord();
+    v.imposterWord = imposterWord();
+  }
+  return v;
+}
+
+function broadcast() {
+  if (!game) return;
+  Object.entries(conns).forEach(([id, c]) => {
+    if (c.open) { try { c.send({ t: 'state', view: buildView(id) }) } catch(e) {} }
+  });
+  save('imposter-session', { role: 'host', code: game.code, name: myName, game });
+  applyView(buildView(myId));
+}
+
+function endGame() {
+  if (!confirm('End the game for everyone?')) return;
+  Object.values(conns).forEach(c => { try { c.send({ t: 'ended' }) } catch(e) {} });
+  setTimeout(goHome, 300);
+}
+
+// ---------- Player ----------
+
+function joinFromHome() {
+  const name = readName();
+  if (!name) return;
+  const code = document.getElementById('code-input').value.trim().toUpperCase();
+  if (code.length !== CODE_LEN) {
+    toast('Enter the ' + CODE_LEN + '-letter game code');
+    document.getElementById('code-input').focus();
+    return;
+  }
+  startPlayer(code, name);
+}
+
+function startPlayer(code, name) {
+  teardown();
+  isHost = false;
+  myCode = code;
+  myName = name;
+  leaving = false;
+  save('imposter-session', { role: 'player', code, name });
+  history.replaceState(null, '', location.pathname + '?code=' + code);
+  setLoading('Joining game ' + code + '...');
+
+  peer = new Peer();
+  peer.on('open', connectToHost);
+  peer.on('disconnected', () => {
+    if (peer && !peer.destroyed) { setConnState(false); scheduleReconnect() }
+  });
+  peer.on('error', err => {
+    if (err.type === 'peer-unavailable') {
+      if (!everConnected) fail('No game found with code ' + code + '. Check the code and try again.');
+      else { setConnState(false); scheduleReconnect() }
+    } else if (['network','server-error','socket-error','socket-closed'].includes(err.type)) {
+      setConnState(false);
+      scheduleReconnect();
+    } else {
+      console.error('Peer error:', err);
+    }
+  });
+
+  joinTimeout = setTimeout(() => {
+    if (!everConnected) fail('Could not reach the game. Make sure the host still has it open, then try again.');
+  }, 15000);
+}
+
+function connectToHost() {
+  if (!peer || peer.destroyed) return;
+  if (conn) { const old = conn; conn = null; try { old.close() } catch(e) {} }
+  const c = peer.connect(PEER_PREFIX + myCode, { reliable: true });
+  conn = c;
+  c.on('open', () => c.send({ t: 'hello', id: myId, name: myName }));
+  c.on('data', msg => { if (c === conn) playerHandle(msg) });
+  c.on('close', () => {
+    if (c === conn && !leaving && peer) { setConnState(false); scheduleReconnect() }
+  });
+}
+
+function scheduleReconnect() {
+  if (reconnectTimer || !peer) return;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    if (!peer || peer.destroyed) return;
+    if (peer.disconnected) peer.reconnect();  // 'open' fires again and reconnects to host
+    else connectToHost();
+  }, 2000);
+}
+
+function playerHandle(msg) {
+  if (!msg || typeof msg !== 'object') return;
+  switch (msg.t) {
+    case 'state':
+      everConnected = true;
+      clearTimeout(joinTimeout);
+      setConnState(true);
+      applyView(msg.view);
+      break;
+    case 'error':
+      leaving = true;
+      fail(msg.msg || 'Could not join this game.');
+      break;
+    case 'kicked':
+      leaving = true;
+      fail('The host removed you from the game.');
+      break;
+    case 'ended':
+      leaving = true;
+      goHome();
+      toast('The host ended the game');
+      break;
+  }
+}
+
+function send(msg) {
+  if (isHost) { hostAction(myId, msg); return }
+  if (conn && conn.open) conn.send(msg);
+  else toast('Not connected. Reconnecting...');
+}
+
+function leaveGame() {
+  if (isHost) { endGame(); return }
+  leaving = true;
+  if (conn && conn.open) { try { conn.send({ t: 'leave' }) } catch(e) {} }
+  setTimeout(goHome, 200);
+}
+
+// ---------- UI actions ----------
+
+function markReady() { send({ t: 'ready' }) }
+function setTimer(secs) { send({ t: 'timer', secs }) }
+function startGame() { send({ t: 'start' }) }
+function skipToVote() { send({ t: 'skip' }) }
+function playAgain() { send({ t: 'again' }) }
+function kickPlayer(id) { send({ t: 'kick', target: id }) }
+
+function selectVote(id) {
+  if (view && view.myVote) return;
+  selectedVote = id;
+  render();
+}
+
+function submitVote() {
+  if (!selectedVote) return;
+  send({ t: 'vote', target: selectedVote });
+}
+
+function inviteLink() {
+  return location.origin + location.pathname + '?code=' + (view ? view.code : myCode);
+}
+
+async function shareCode() {
+  const url = inviteLink();
+  const text = 'Join my Imposter game! Code: ' + view.code;
+  if (navigator.share) {
+    try { await navigator.share({ title: 'Imposter', text, url }); return } catch(e) { if (e.name === 'AbortError') return }
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    toast('Invite link copied');
+  } catch(e) {
+    prompt('Copy this invite link:', url);
+  }
+}
+
+// ---------- Rendering ----------
+
+function applyView(v) {
+  const key = v.round + ':' + v.phase;
+  if (key !== phaseKey) {
+    phaseKey = key;
+    if (v.phase === 'reveal') wordRevealed = false;
+    if (v.phase === 'discussion') peekRevealed = false;
+    if (v.phase === 'voting' || v.phase === 'lobby') selectedVote = null;
+  }
+  view = v;
+  timerEnd = v.timerRemaining != null ? Date.now() + v.timerRemaining : 0;
+  render();
+}
+
+function playerById(id) {
+  return (view && view.players.find(p => p.id === id)) || { name: 'Player', num: '?' };
+}
+
+function playerRow(p, extra, cls) {
+  const isMe = p.id === myId;
+  return `<div class="player-item ${isMe ? 'is-you' : ''} ${p.online ? '' : 'offline'} ${cls || ''}">
+    <div class="player-num">${p.num}</div>
+    <div class="player-info"><div class="player-name">${esc(p.name)}</div></div>
+    ${extra || ''}
+  </div>`;
+}
+
+function render() {
+  if (!view) return;
+  const phase = view.phase;
+  const amHost = view.hostId === myId;
+  const players = view.players;
+  const me = players.find(p => p.id === myId);
+  const online = players.filter(p => p.online);
+
+  document.getElementById('header-code').textContent = view.code;
+  document.getElementById('header-me').innerHTML = me
+    ? `You are <strong>#${me.num} ${esc(me.name)}</strong>` : '';
+
+  if (phase !== 'discussion') stopTimerTick();
+
+  switch (phase) {
     case 'lobby': {
       showScreen('lobby');
+      document.getElementById('lobby-code').textContent = view.code;
       document.getElementById('lobby-count').textContent =
-        playerCount + ' player' + (playerCount !== 1 ? 's' : '') + ' joined';
+        players.length + ' player' + (players.length !== 1 ? 's' : '') + ' joined';
 
-      // Player list
-      const listEl = document.getElementById('lobby-players');
-      listEl.innerHTML = playerIds.map(id => {
-        const p = profiles[id] || { name: '', avatarUrl: '', color: '#666' };
-        const name = p.name || 'Loading...';
-        const isMe = id === myId;
-        const isHost = id === gameState.hostId;
-        return `<div class="player-item ${isMe ? 'is-you' : ''} fade-in">
-          <img class="player-avatar" src="${esc(p.avatarUrl || '')}" alt="">
-          <div class="player-info">
-            <div class="player-name">${esc(name)}</div>
-          </div>
-          ${isHost ? '<span class="player-badge badge-host">Host</span>' : ''}
-          ${isMe ? '<span class="player-badge badge-you">You</span>' : ''}
-        </div>`;
+      document.getElementById('lobby-players').innerHTML = players.map(p => {
+        const isMe = p.id === myId;
+        let badges = '';
+        if (p.id === view.hostId) badges += '<span class="player-badge badge-host">Host</span>';
+        if (isMe) badges += '<span class="player-badge badge-you">You</span>';
+        if (!p.online) badges += '<span class="player-badge badge-offline">Offline</span>';
+        if (amHost && !isMe) badges += `<button class="kick-btn" title="Remove player" onclick="kickPlayer('${p.id}')">&times;</button>`;
+        return playerRow(p, badges, 'fade-in');
       }).join('');
 
-      // Settings (host only)
       const settingsEl = document.getElementById('lobby-settings');
       settingsEl.hidden = !amHost;
       if (amHost) {
-        const optEl = document.getElementById('timer-options');
-        const dur = gameState.timerDuration || 120;
-        optEl.innerHTML = TIMER_OPTS.map(t => {
+        document.getElementById('timer-options').innerHTML = TIMER_OPTS.map(t => {
           const label = t < 120 ? t + 's' : (t / 60) + 'm';
-          return `<button class="timer-opt ${t === dur ? 'active' : ''}"
+          return `<button class="timer-opt ${t === view.timerDuration ? 'active' : ''}"
             onclick="setTimer(${t})">${label}</button>`;
         }).join('');
       }
 
-      // Actions
-      const actEl = document.getElementById('lobby-actions');
       let btns = '';
       if (amHost) {
-        btns += `<button class="btn btn-primary" onclick="startGame()"
-          ${playerCount < 3 ? 'disabled' : ''}>
-          Start Game${playerCount < 3 ? ' (need 3+)' : ''}
-        </button>`;
-        btns += `<button class="btn btn-ghost btn-sm" onclick="endGame()" style="align-self:center;width:auto">End Game</button>`;
-      } else if (!amPlayer) {
-        btns += `<button class="btn btn-primary" onclick="joinGame()">Join Game</button>`;
+        const enough = online.length >= MIN_PLAYERS;
+        btns += `<button class="btn btn-primary" onclick="startGame()" ${enough ? '' : 'disabled'}>
+          Start Game${enough ? '' : ' (need ' + MIN_PLAYERS + '+)'}</button>`;
+        btns += `<button class="btn btn-ghost btn-sm" onclick="endGame()" style="align-self:center">End Game</button>`;
       } else {
         btns += `<p class="center subtitle">Waiting for the host to start...</p>`;
-        btns += `<button class="btn btn-ghost btn-sm" onclick="leaveGame()" style="align-self:center;width:auto">Leave</button>`;
+        btns += `<button class="btn btn-ghost btn-sm" onclick="leaveGame()" style="align-self:center">Leave</button>`;
       }
-      actEl.innerHTML = btns;
+      document.getElementById('lobby-actions').innerHTML = btns;
       break;
     }
 
     case 'reveal': {
       showScreen('reveal');
-      const myWord = getMyWord();
       const revealEl = document.getElementById('reveal-word');
       const hintEl = document.getElementById('reveal-hint');
-
       if (wordRevealed) {
-        revealEl.innerHTML = `<div class="word-text">${esc(myWord)}</div>`;
+        revealEl.innerHTML = `<div class="word-text">${esc(view.myWord)}</div>`;
         hintEl.textContent = 'Tap to hide';
       } else {
         revealEl.innerHTML = '<div class="word-hidden">???</div>';
         hintEl.textContent = 'Tap to reveal';
       }
-
-      const readyState = gameState.ready || {};
-      const readyCount = Object.keys(readyState).length;
-      const totalPlayers = playerIds.length;
+      const readyCount = online.filter(p => view.ready[p.id]).length;
       document.getElementById('reveal-status').textContent =
-        readyCount + ' of ' + totalPlayers + ' ready';
-
-      const btnReady = document.getElementById('btn-ready-reveal');
-      if (readyState[myId]) {
-        btnReady.textContent = 'Waiting for others...';
-        btnReady.disabled = true;
-      } else {
-        btnReady.textContent = "I'm Ready";
-        btnReady.disabled = false;
-      }
-
-      // Auto-advance when all ready (host does it)
-      if (amHost && readyCount === totalPlayers && totalPlayers >= 3) {
-        advanceToDiscussion();
-      }
+        readyCount + ' of ' + online.length + ' ready';
+      const btn = document.getElementById('btn-ready-reveal');
+      if (view.ready[myId]) { btn.textContent = 'Waiting for others...'; btn.disabled = true }
+      else { btn.textContent = "I'm Ready"; btn.disabled = false }
       break;
     }
 
@@ -753,447 +1433,144 @@ function render() {
       updateTimer();
       startTimerTick();
 
-      const myWord = getMyWord();
-      const peekEl = document.getElementById('peek-word');
-      if (peekRevealed) {
-        peekEl.innerHTML = `<div class="word-text" style="font-size:1.5rem">${esc(myWord)}</div>`;
-      } else {
-        peekEl.innerHTML = '<div class="word-hidden" style="font-size:1.2rem;letter-spacing:0.2em">Tap to peek</div>';
-      }
+      document.getElementById('peek-word').innerHTML = peekRevealed
+        ? `<div class="word-text" style="font-size:1.5rem">${esc(view.myWord)}</div>`
+        : '<div class="word-hidden" style="font-size:1.2rem;letter-spacing:0.2em">Tap to peek</div>';
 
-      // Player list with ready status
-      const readyState = gameState.ready || {};
-      const listEl = document.getElementById('discussion-players');
-      listEl.innerHTML = playerIds.map(id => {
-        const p = profiles[id] || { name: '', avatarUrl: '' };
-        const isMe = id === myId;
-        const isReady = readyState[id];
-        return `<div class="player-item ${isMe ? 'is-you' : ''}">
-          <img class="player-avatar" src="${esc(p.avatarUrl || '')}" alt="">
-          <div class="player-info">
-            <div class="player-name">${esc(p.name || 'Player')}</div>
-          </div>
-          ${isReady ? '<span class="player-badge badge-ready">Ready</span>' : ''}
-          ${isMe && !isReady ? '<span class="player-badge badge-you">You</span>' : ''}
-        </div>`;
+      document.getElementById('discussion-players').innerHTML = players.map(p => {
+        let badges = '';
+        if (view.ready[p.id]) badges += '<span class="player-badge badge-ready">Ready</span>';
+        else if (p.id === myId) badges += '<span class="player-badge badge-you">You</span>';
+        if (!p.online) badges += '<span class="player-badge badge-offline">Offline</span>';
+        return playerRow(p, badges);
       }).join('');
 
-      const btnReady = document.getElementById('btn-ready-vote');
-      const readyCount = Object.keys(readyState).length;
-      if (readyState[myId]) {
-        btnReady.textContent = readyCount + '/' + playerIds.length + ' ready';
-        btnReady.disabled = true;
-      } else {
-        btnReady.textContent = 'Ready to Vote';
-        btnReady.disabled = false;
-      }
-
-      // Auto-advance when all ready or timer expired
-      if (amHost) {
-        const allReady = readyCount === playerIds.length;
-        const timerDone = gameState.timerEnd && Date.now() >= gameState.timerEnd;
-        if (allReady || timerDone) {
-          advanceToVoting();
-        }
-      }
+      const btn = document.getElementById('btn-ready-vote');
+      const readyCount = online.filter(p => view.ready[p.id]).length;
+      if (view.ready[myId]) { btn.textContent = readyCount + '/' + online.length + ' ready'; btn.disabled = true }
+      else { btn.textContent = 'Ready to Vote'; btn.disabled = false }
+      document.getElementById('btn-skip').hidden = !amHost;
       break;
     }
 
     case 'voting': {
       showScreen('voting');
-      stopTimerTick();
+      if (view.myVote) selectedVote = view.myVote;
 
-      const votes = gameState.votes || {};
-      const myVote = votes[myId];
-
-      // If I already voted, lock selection
-      if (myVote && !selectedVote) selectedVote = myVote;
-
-      const listEl = document.getElementById('voting-players');
-      listEl.innerHTML = playerIds.filter(id => id !== myId).map(id => {
-        const p = profiles[id] || { name: '', avatarUrl: '' };
-        const isSelected = selectedVote === id;
-        const hasVoted = !!votes[id];
-        return `<div class="player-item selectable ${isSelected ? 'selected' : ''}"
-          onclick="${myVote ? '' : 'selectVote(\'' + esc(id) + '\')'}">
-          <img class="player-avatar" src="${esc(p.avatarUrl || '')}" alt="">
-          <div class="player-info">
-            <div class="player-name">${esc(p.name || 'Player')}</div>
-          </div>
-          ${hasVoted ? '<span class="player-badge badge-voted">Voted</span>' : ''}
-        </div>`;
+      document.getElementById('voting-players').innerHTML = players.filter(p => p.id !== myId).map(p => {
+        const badges = view.voted[p.id] ? '<span class="player-badge badge-voted">Voted</span>' : '';
+        const cls = (view.myVote ? '' : 'selectable ') + (selectedVote === p.id ? 'selected' : '');
+        return playerRow(p, badges, cls).replace('<div class="player-item',
+          `<div onclick="selectVote('${p.id}')" class="player-item`);
       }).join('');
 
-      const voteCount = Object.keys(votes).length;
+      const voteCount = online.filter(p => view.voted[p.id]).length;
       document.getElementById('voting-status').textContent =
-        voteCount + ' of ' + playerIds.length + ' voted';
+        voteCount + ' of ' + online.length + ' voted';
 
-      const btnVote = document.getElementById('btn-vote');
-      if (myVote) {
-        btnVote.textContent = 'Vote submitted';
-        btnVote.disabled = true;
-      } else {
-        btnVote.disabled = !selectedVote;
-      }
-
-      // Auto-advance when all voted
-      if (amHost && voteCount === playerIds.length) {
-        advanceToResults();
-      }
+      const btn = document.getElementById('btn-vote');
+      if (view.myVote) { btn.textContent = 'Vote submitted'; btn.disabled = true }
+      else { btn.textContent = 'Confirm Vote'; btn.disabled = !selectedVote }
       break;
     }
 
     case 'results': {
       showScreen('results');
-      stopTimerTick();
-
-      const imposterId = gameState.imposterId;
-      const votes = gameState.votes || {};
-      const civilianWord = getCivilianWord();
-      const imposterWord = getImposterWord();
-
-      // Tally votes
+      const votes = view.votes || {};
       const tally = {};
-      playerIds.forEach(id => tally[id] = 0);
-      Object.values(votes).forEach(target => {
-        if (tally[target] !== undefined) tally[target]++;
+      players.forEach(p => tally[p.id] = 0);
+      Object.values(votes).forEach(t => { if (tally[t] !== undefined) tally[t]++ });
+
+      let maxVotes = 0, mostVoted = [];
+      Object.entries(tally).forEach(([id, n]) => {
+        if (n > maxVotes) { maxVotes = n; mostVoted = [id] }
+        else if (n === maxVotes) mostVoted.push(id);
       });
+      const caught = maxVotes > 0 && mostVoted.length === 1 && mostVoted[0] === view.imposterId;
+      const imp = playerById(view.imposterId);
+      const impLabel = '#' + imp.num + ' ' + imp.name;
 
-      // Check if imposter was caught
-      let maxVotes = 0;
-      let mostVoted = [];
-      Object.entries(tally).forEach(([id, count]) => {
-        if (count > maxVotes) {
-          maxVotes = count;
-          mostVoted = [id];
-        } else if (count === maxVotes) {
-          mostVoted.push(id);
-        }
-      });
-
-      const caught = mostVoted.length === 1 && mostVoted[0] === imposterId;
-      const imposterName = (profiles[imposterId] || {}).name || 'Unknown';
-      const iWasImposter = imposterId === myId;
-
-      // Banner
       const bannerEl = document.getElementById('result-banner');
       if (caught) {
         bannerEl.className = 'result-banner win fade-in';
         bannerEl.innerHTML = `<h1 class="accent-text">CAUGHT!</h1>
-          <p>The imposter <strong>${esc(imposterName)}</strong> was found out</p>`;
+          <p>The imposter <strong>${esc(impLabel)}</strong> was found out</p>`;
       } else {
         bannerEl.className = 'result-banner lose fade-in';
         bannerEl.innerHTML = `<h1 class="danger-text">ESCAPED!</h1>
-          <p>The imposter <strong>${esc(imposterName)}</strong> got away</p>`;
+          <p>The imposter <strong>${esc(impLabel)}</strong> got away</p>`;
       }
 
-      // Words
       document.getElementById('result-words').innerHTML = `
         <div class="word-box civilian">
           <div class="word-box-label">Civilian Word</div>
-          <div class="word-box-text">${esc(civilianWord)}</div>
+          <div class="word-box-text">${esc(view.civilianWord)}</div>
         </div>
         <div class="word-box imposter">
           <div class="word-box-label">Imposter Word</div>
-          <div class="word-box-text">${esc(imposterWord)}</div>
+          <div class="word-box-text">${esc(view.imposterWord)}</div>
         </div>`;
 
-      // Vote tally
-      const sortedTally = playerIds
-        .map(id => ({ id, count: tally[id] || 0 }))
-        .sort((a, b) => b.count - a.count);
-      const tallyEl = document.getElementById('result-votes');
-      tallyEl.innerHTML = sortedTally.map(({ id, count }) => {
-        const p = profiles[id] || { name: '' };
-        const isImp = id === imposterId;
-        const pct = playerIds.length > 0 ? (count / playerIds.length) * 100 : 0;
-        return `<div class="vote-row ${isImp ? 'is-imposter' : ''}">
-          <span class="vote-count">${count}</span>
-          <span style="flex:1;font-weight:600">${esc(p.name || 'Player')}
-            ${isImp ? ' <span class="player-badge badge-imposter" style="font-size:0.65rem;vertical-align:middle">Imposter</span>' : ''}</span>
-          <div class="vote-bar" style="width:80px"><div class="vote-bar-fill" style="width:${pct}%"></div></div>
-        </div>`;
-      }).join('');
+      const total = Object.keys(votes).length || 1;
+      document.getElementById('result-votes').innerHTML = players
+        .map(p => ({ p, n: tally[p.id] || 0 }))
+        .sort((a, b) => b.n - a.n)
+        .map(({ p, n }) => {
+          const isImp = p.id === view.imposterId;
+          return `<div class="vote-row ${isImp ? 'is-imposter' : ''}">
+            <span class="vote-count">${n}</span>
+            <span style="flex:1;font-weight:600">#${p.num} ${esc(p.name)}
+              ${isImp ? ' <span class="player-badge badge-imposter" style="font-size:0.65rem;vertical-align:middle">Imposter</span>' : ''}</span>
+            <div class="vote-bar" style="width:80px"><div class="vote-bar-fill" style="width:${(n / total) * 100}%"></div></div>
+          </div>`;
+        }).join('');
 
-      // Actions
-      const actEl = document.getElementById('result-actions');
-      if (amHost) {
-        actEl.innerHTML = `
-          <button class="btn btn-primary" onclick="playAgain()">Play Again</button>
-          <button class="btn btn-ghost btn-sm" onclick="endGame()" style="align-self:center;width:auto">End Game</button>`;
-      } else {
-        actEl.innerHTML = '<p class="center subtitle">Waiting for host to start next round...</p>';
-      }
+      document.getElementById('result-actions').innerHTML = amHost
+        ? `<button class="btn btn-primary" onclick="playAgain()">Play Again</button>
+           <button class="btn btn-ghost btn-sm" onclick="endGame()" style="align-self:center">End Game</button>`
+        : `<p class="center subtitle">Waiting for host to start next round...</p>
+           <button class="btn btn-ghost btn-sm" onclick="leaveGame()" style="align-self:center">Leave</button>`;
       break;
     }
-
-    default:
-      showScreen('home');
   }
 }
 
-// Game actions
-
-async function createGame() {
-  try {
-    await db.doc('games/active').set({
-      phase: 'lobby',
-      hostId: myId,
-      players: { [myId]: { joinedAt: Date.now() } },
-      round: 0,
-      timerDuration: 120,
-      createdAt: Date.now()
-    });
-  } catch(e) {
-    console.error('Create failed:', e);
-  }
-}
-
-async function joinGame() {
-  if (!gameState) return;
-  try {
-    await db.doc('games/active').update({
-      players: { [myId]: { joinedAt: Date.now() } }
-    });
-  } catch(e) {
-    console.error('Join failed:', e);
-  }
-}
-
-async function leaveGame() {
-  if (!gameState || !gameState.players) return;
-  // Remove self from players by rewriting the players object without self
-  const newPlayers = {};
-  Object.entries(gameState.players).forEach(([id, data]) => {
-    if (id !== myId) newPlayers[id] = data;
-  });
-  try {
-    await db.doc('games/active').update({ players: newPlayers });
-  } catch(e) {
-    console.error('Leave failed:', e);
-  }
-}
-
-async function setTimer(secs) {
-  try {
-    await db.doc('games/active').update({ timerDuration: secs });
-  } catch(e) { /* ignore */ }
-}
-
-async function startGame() {
-  if (!gameState || !gameState.players) return;
-  const playerIds = Object.keys(gameState.players);
-  if (playerIds.length < 3) return;
-
-  // Pick random word pair
-  const pairIndex = Math.floor(Math.random() * WORD_PAIRS.length);
-  // Randomize which word goes to imposter
-  const flip = Math.random() < 0.5;
-
-  // Pick random imposter
-  const imposterIdx = Math.floor(Math.random() * playerIds.length);
-  const imposterId = playerIds[imposterIdx];
-
-  try {
-    await db.doc('games/active').update({
-      phase: 'reveal',
-      round: (gameState.round || 0) + 1,
-      wordPairIndex: pairIndex,
-      wordFlip: flip,
-      imposterId: imposterId,
-      ready: {},
-      votes: {}
-    });
-    wordRevealed = false;
-    selectedVote = null;
-  } catch(e) {
-    console.error('Start failed:', e);
-  }
-}
-
-async function markReady() {
-  try {
-    await db.doc('games/active').update({
-      ready: { [myId]: true }
-    });
-  } catch(e) {
-    console.error('Ready failed:', e);
-  }
-}
-
-async function advanceToDiscussion() {
-  const dur = gameState.timerDuration || 120;
-  try {
-    await db.doc('games/active').update({
-      phase: 'discussion',
-      timerEnd: Date.now() + dur * 1000,
-      ready: {}
-    });
-    peekRevealed = false;
-  } catch(e) { /* ignore */ }
-}
-
-async function advanceToVoting() {
-  try {
-    await db.doc('games/active').update({
-      phase: 'voting',
-      votes: {}
-    });
-    selectedVote = null;
-  } catch(e) { /* ignore */ }
-}
-
-function selectVote(id) {
-  selectedVote = id;
-  render();
-}
-
-async function submitVote() {
-  if (!selectedVote) return;
-  try {
-    await db.doc('games/active').update({
-      votes: { [myId]: selectedVote }
-    });
-  } catch(e) {
-    console.error('Vote failed:', e);
-  }
-}
-
-async function advanceToResults() {
-  try {
-    await db.doc('games/active').update({ phase: 'results' });
-  } catch(e) { /* ignore */ }
-}
-
-async function playAgain() {
-  wordRevealed = false;
-  peekRevealed = false;
-  selectedVote = null;
-  try {
-    await db.doc('games/active').update({
-      phase: 'lobby',
-      wordPairIndex: null,
-      wordFlip: null,
-      imposterId: null,
-      timerEnd: null,
-      ready: {},
-      votes: {}
-    });
-  } catch(e) {
-    console.error('Play again failed:', e);
-  }
-}
-
-async function endGame() {
-  stopTimerTick();
-  wordRevealed = false;
-  peekRevealed = false;
-  selectedVote = null;
-  try {
-    await db.doc('games/active').delete();
-  } catch(e) {
-    console.error('End failed:', e);
-  }
-}
-
-// Word helpers
-
-function getMyWord() {
-  if (!gameState || gameState.wordPairIndex == null) return '???';
-  const pair = WORD_PAIRS[gameState.wordPairIndex];
-  if (!pair) return '???';
-  const isImposter = gameState.imposterId === myId;
-  if (gameState.wordFlip) {
-    return isImposter ? pair[0] : pair[1];
-  } else {
-    return isImposter ? pair[1] : pair[0];
-  }
-}
-
-function getCivilianWord() {
-  if (!gameState || gameState.wordPairIndex == null) return '???';
-  const pair = WORD_PAIRS[gameState.wordPairIndex];
-  return gameState.wordFlip ? pair[1] : pair[0];
-}
-
-function getImposterWord() {
-  if (!gameState || gameState.wordPairIndex == null) return '???';
-  const pair = WORD_PAIRS[gameState.wordPairIndex];
-  return gameState.wordFlip ? pair[0] : pair[1];
-}
-
-function toggleWord() {
-  wordRevealed = !wordRevealed;
-  render();
-}
-
-function togglePeek() {
-  peekRevealed = !peekRevealed;
-  render();
-}
+function toggleWord() { wordRevealed = !wordRevealed; render() }
+function togglePeek() { peekRevealed = !peekRevealed; render() }
 
 // Timer
 
 function startTimerTick() {
-  if (timerInterval) return;
-  timerInterval = setInterval(updateTimer, 500);
+  if (!timerInterval) timerInterval = setInterval(updateTimer, 500);
 }
 
 function stopTimerTick() {
-  if (timerInterval) {
-    clearInterval(timerInterval);
-    timerInterval = null;
-  }
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null }
 }
 
 function updateTimer() {
-  if (!gameState || !gameState.timerEnd) return;
-  const now = Date.now();
-  const remaining = Math.max(0, gameState.timerEnd - now);
-  const total = (gameState.timerDuration || 120) * 1000;
+  if (!view || !timerEnd) return;
+  const remaining = Math.max(0, timerEnd - Date.now());
+  const total = (view.timerDuration || 120) * 1000;
   const secs = Math.ceil(remaining / 1000);
-  const mins = Math.floor(secs / 60);
-  const s = secs % 60;
-
   const digitsEl = document.getElementById('timer-digits');
   const progressEl = document.getElementById('timer-progress');
-  if (digitsEl) {
-    digitsEl.textContent = mins + ':' + String(s).padStart(2, '0');
-    if (secs <= 10) digitsEl.style.color = 'var(--danger)';
-    else digitsEl.style.color = '';
-  }
-
-  if (progressEl) {
-    const circumference = 2 * Math.PI * 72;
-    const fraction = remaining / total;
-    progressEl.style.strokeDashoffset = circumference * (1 - fraction);
-    if (secs <= 10) progressEl.classList.add('low');
-    else progressEl.classList.remove('low');
-  }
-
-  // Auto-advance when timer hits 0 (host only)
-  if (remaining === 0 && gameState.phase === 'discussion') {
-    const amHost = gameState.hostId === myId;
-    if (amHost) {
-      stopTimerTick();
-      advanceToVoting();
-    }
-  }
+  digitsEl.textContent = Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0');
+  digitsEl.style.color = secs <= 10 ? 'var(--danger)' : '';
+  progressEl.style.strokeDashoffset = 2 * Math.PI * 72 * (1 - remaining / total);
+  progressEl.classList.toggle('low', secs <= 10);
 }
 
 // Utils
 
 function esc(str) {
-  if (!str) return '';
+  if (str == null) return '';
   const d = document.createElement('div');
-  d.textContent = str;
+  d.textContent = String(str);
   return d.innerHTML;
 }
 
-// Boot
-if (window.claude?.hot?.ready) {
-  window.claude.hot.ready(data => init());
-} else {
-  init();
-}
+init();
 </script>
+</body>
+</html>
