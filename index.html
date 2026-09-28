@@ -75,6 +75,7 @@ body {
 }
 
 html, body { height: 100% }
+[hidden] { display: none !important }
 
 #app {
   max-width: 440px;
@@ -429,6 +430,112 @@ p { margin: 0; line-height: 1.55 }
 @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.5 } }
 .pulse { animation: pulse 1.5s ease infinite }
 
+/* Motion: screens build up piece by piece instead of appearing all at once */
+@keyframes rise { from { opacity: 0; transform: translateY(18px) } to { opacity: 1; transform: none } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(-24px) } to { opacity: 1; transform: none } }
+@keyframes popIn { 0% { opacity: 0; transform: scale(0.6) } 70% { opacity: 1; transform: scale(1.08) } 100% { transform: scale(1) } }
+@keyframes dropIn { 0% { opacity: 0; transform: translateY(-40px) rotate(-8deg) } 70% { opacity: 1; transform: translateY(4px) } 100% { transform: none } }
+@keyframes growBar { from { width: 0 } }
+@keyframes heartbeat { 0%,100% { transform: scale(1) } 15% { transform: scale(1.12) } 30% { transform: scale(1) } }
+@keyframes selectPop { 0% { transform: scale(1) } 40% { transform: scale(1.04) } 100% { transform: scale(1) } }
+@keyframes shake { 0%,100% { transform: none } 20% { transform: translateX(-6px) } 40% { transform: translateX(6px) } 60% { transform: translateX(-4px) } 80% { transform: translateX(4px) } }
+@keyframes overlayIn { from { opacity: 0 } to { opacity: 1 } }
+@keyframes zoomBeat { 0% { opacity: 0; transform: scale(2.2) } 35% { opacity: 1; transform: scale(1) } 80% { opacity: 1 } 100% { opacity: 0; transform: scale(0.8) } }
+
+.screen.entering > * { animation: rise 0.5s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 110ms) }
+.anim-slide { animation: slideIn 0.4s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--d, 0) * 90ms) }
+.anim-pop { animation: popIn 0.5s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--d, 0) * 90ms) }
+.anim-drop { display: inline-block; animation: dropIn 0.55s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--d, 0) * 70ms) }
+.anim-shake { animation: shake 0.45s ease }
+.player-item.selected { animation: selectPop 0.3s ease }
+.vote-bar-fill { animation: growBar 0.8s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--d, 0) * 150ms + 200ms) }
+.timer-digits.low { animation: heartbeat 1s ease infinite }
+
+/* Flip card for the secret word */
+.flip-card { perspective: 1000px; cursor: pointer; user-select: none; min-height: 200px }
+.flip-inner {
+  position: relative;
+  min-height: 200px;
+  transition: transform 0.6s cubic-bezier(.2,.8,.2,1);
+  transform-style: preserve-3d;
+}
+.flip-card.flipped .flip-inner { transform: rotateY(180deg) }
+.flip-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  padding: 24px;
+  text-align: center;
+}
+.flip-front {
+  background: repeating-linear-gradient(45deg, var(--card), var(--card) 12px, var(--surface) 12px, var(--surface) 24px);
+  border: 2px solid var(--card-border);
+}
+.flip-card:hover .flip-front { border-color: var(--accent) }
+.flip-back {
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 40px var(--accent-glow);
+  transform: rotateY(180deg);
+}
+.flip-face .word-label {
+  font-size: 0.85rem; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px;
+}
+.flip-face .word-text { font-family: var(--font-display); font-size: clamp(2rem, 10vw, 3.2rem); letter-spacing: 0.03em }
+.flip-face .word-hidden { font-family: var(--font-display); font-size: 3.5rem; color: var(--text-muted) }
+.flip-face .tap-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 16px }
+
+/* Full-screen phase announcements */
+.phase-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  animation: overlayIn 0.25s ease both;
+  cursor: pointer;
+}
+.phase-overlay .big {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 16vw, 5.5rem);
+  color: var(--accent);
+  animation: zoomBeat 0.9s ease both;
+}
+.phase-overlay .big.danger { color: var(--danger) }
+.phase-overlay .sub { color: var(--text-muted); font-weight: 700; animation: rise 0.4s ease both 0.2s }
+
+/* Results reveal */
+.suspense {
+  text-align: center;
+  padding: 40px 16px;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+}
+.imposter-reveal {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.imposter-reveal .player-num { width: 72px; height: 72px; font-size: 2rem; border-color: var(--danger); color: var(--danger); background: var(--danger-dim) }
+.imposter-reveal .imp-name { font-family: var(--font-display); font-size: 1.8rem }
+
 .info-box {
   background: var(--accent-dim);
   border-left: 3px solid var(--accent);
@@ -442,6 +549,8 @@ p { margin: 0; line-height: 1.55 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
@@ -608,7 +717,7 @@ p { margin: 0; line-height: 1.55 }
   <!-- Home -->
   <div id="screen-home" class="screen" hidden>
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;min-height:160px">
-      <h1 class="accent-text">IMPOSTER</h1>
+      <h1 class="accent-text" aria-label="IMPOSTER"><span class="anim-drop" style="--d:0">I</span><span class="anim-drop" style="--d:1">M</span><span class="anim-drop" style="--d:2">P</span><span class="anim-drop" style="--d:3">O</span><span class="anim-drop" style="--d:4">S</span><span class="anim-drop" style="--d:5">T</span><span class="anim-drop" style="--d:6">E</span><span class="anim-drop" style="--d:7">R</span></h1>
       <p class="subtitle">Find the spy among your friends</p>
     </div>
     <div class="field">
@@ -655,10 +764,19 @@ p { margin: 0; line-height: 1.55 }
       <h2>Your Role</h2>
       <p class="subtitle">Tap the card to see your word. Keep it secret!</p>
     </div>
-    <div id="reveal-card" class="word-card" onclick="toggleWord()">
-      <div class="word-label">YOUR WORD</div>
-      <div id="reveal-word"></div>
-      <div id="reveal-hint" class="tap-hint"></div>
+    <div id="reveal-card" class="flip-card" onclick="toggleWord()">
+      <div class="flip-inner">
+        <div class="flip-face flip-front">
+          <div class="word-label">Your word</div>
+          <div class="word-hidden">?</div>
+          <div class="tap-hint">Tap to flip</div>
+        </div>
+        <div class="flip-face flip-back">
+          <div class="word-label">Your word</div>
+          <div id="reveal-word" class="word-text"></div>
+          <div class="tap-hint">Tap to hide</div>
+        </div>
+      </div>
     </div>
     <div class="spacer"></div>
     <div id="reveal-status" class="center subtitle"></div>
@@ -704,9 +822,9 @@ p { margin: 0; line-height: 1.55 }
 
   <!-- Results -->
   <div id="screen-results" class="screen" hidden>
-    <div id="result-banner" class="result-banner"></div>
+    <div id="result-banner"></div>
     <div id="result-words" class="word-reveal"></div>
-    <h3>Votes</h3>
+    <h3 id="result-votes-title" hidden>Votes</h3>
     <div id="result-votes" class="vote-tally"></div>
     <div class="spacer"></div>
     <div id="result-actions" style="display:flex;flex-direction:column;gap:10px"></div>
@@ -787,11 +905,27 @@ let timerInterval = null;
 
 // Screens
 const screens = ['loading','error','home','lobby','reveal','discussion','voting','results'];
+const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let currentScreen = 'loading';
+let enterTimer = null;
 function showScreen(name) {
   screens.forEach(s => {
     const el = document.getElementById('screen-' + s);
     if (el) el.hidden = s !== name;
   });
+  if (name !== currentScreen) {
+    currentScreen = name;
+    // Stagger the new screen's sections in one after another
+    const el = document.getElementById('screen-' + name);
+    Array.from(el.children).forEach((c, i) => c.style.setProperty('--i', i));
+    el.classList.remove('entering');
+    void el.offsetWidth;
+    el.classList.add('entering');
+    clearTimeout(enterTimer);
+    enterTimer = setTimeout(() => el.classList.remove('entering'), 400 + el.children.length * 110);
+    el.querySelectorAll(".player-list, .vote-tally").forEach(l => { l.textContent = "" });
+    el.querySelectorAll("*").forEach(n => { n._html = null });
+  }
   document.getElementById('game-header').hidden = !view || ['loading','error','home'].includes(name);
 }
 
@@ -833,6 +967,8 @@ function teardown() {
   clearTimeout(joinTimeout); joinTimeout = null;
   clearInterval(hostTick); hostTick = null;
   stopTimerTick();
+  hideOverlay();
+  resultsTimers.forEach(clearTimeout); resultsTimers = [];
   if (peer) { try { peer.destroy() } catch(e) {} }
   peer = null; conn = null; conns = {};
   isHost = false; game = null; view = null;
@@ -875,6 +1011,7 @@ function readName() {
   const name = document.getElementById('name-input').value.trim().replace(/\s+/g, ' ').slice(0, 20);
   if (!name) {
     toast('Enter your name first');
+    shakeEl(document.getElementById('name-input'));
     document.getElementById('name-input').focus();
     return null;
   }
@@ -1189,6 +1326,7 @@ function joinFromHome() {
   const code = document.getElementById('code-input').value.trim().toUpperCase();
   if (code.length !== CODE_LEN) {
     toast('Enter the ' + CODE_LEN + '-letter game code');
+    shakeEl(document.getElementById('code-input'));
     document.getElementById('code-input').focus();
     return;
   }
@@ -1327,13 +1465,111 @@ async function shareCode() {
 
 // ---------- Rendering ----------
 
+let overlayEl = null;
+let overlayTimer = null;
+let resultsStage = 0;
+let resultsTimers = [];
+
+// Only touch the DOM when the markup actually changed, so animations don't replay on every update
+function setHTML(el, html) {
+  if (el._html !== html) { el._html = html; el.innerHTML = html }
+}
+
+// Keyed list: existing rows stay put, new rows slide in one after another
+function renderList(el, items) {
+  const existing = {};
+  Array.from(el.children).forEach(c => { existing[c.dataset.key] = c });
+  let newCount = 0;
+  items.forEach(({ key, html }, idx) => {
+    let node = existing[key];
+    delete existing[key];
+    if (!node || node._html !== html) {
+      const tpl = document.createElement('template');
+      tpl.innerHTML = html.trim();
+      const fresh = tpl.content.firstElementChild;
+      fresh.dataset.key = key;
+      fresh._html = html;
+      if (node) node.replaceWith(fresh);
+      else { fresh.classList.add('anim-slide'); fresh.style.setProperty('--d', newCount++) }
+      node = fresh;
+    }
+    if (el.children[idx] !== node) el.insertBefore(node, el.children[idx] || null);
+  });
+  Object.values(existing).forEach(c => c.remove());
+}
+
+function shakeEl(el) {
+  el.classList.remove('anim-shake');
+  void el.offsetWidth;
+  el.classList.add('anim-shake');
+}
+
+// Full-screen announcements between phases (tap to skip)
+function playOverlay(steps) {
+  hideOverlay();
+  if (REDUCED_MOTION) steps = steps.slice(0, 1).map(s => ({ ...s, ms: Math.min(s.ms, 900) }));
+  const ov = document.createElement('div');
+  ov.className = 'phase-overlay';
+  ov.onclick = hideOverlay;
+  document.body.appendChild(ov);
+  overlayEl = ov;
+  let i = 0;
+  const next = () => {
+    if (i >= steps.length) { hideOverlay(); return }
+    const s = steps[i++];
+    ov.innerHTML = `<div class="big ${s.cls || ''}" style="animation-duration:${s.ms}ms">${esc(s.text)}</div>`
+      + (s.sub ? `<div class="sub">${esc(s.sub)}</div>` : '');
+    overlayTimer = setTimeout(next, s.ms);
+  };
+  next();
+}
+
+function hideOverlay() {
+  clearTimeout(overlayTimer);
+  if (overlayEl) { overlayEl.remove(); overlayEl = null }
+}
+
+function onPhaseEnter(v, prevKey) {
+  hideOverlay();
+  resultsTimers.forEach(clearTimeout);
+  resultsTimers = [];
+  if (v.phase === 'reveal') {
+    playOverlay([
+      { text: 'ROUND ' + v.round, sub: 'Get your word ready...', ms: 1300 },
+      { text: '3', ms: 750 }, { text: '2', ms: 750 }, { text: '1', ms: 750 }
+    ]);
+  } else if (v.phase === 'discussion') {
+    playOverlay([{ text: 'DISCUSS!', sub: 'Describe your word without saying it', ms: 1800 }]);
+  } else if (v.phase === 'voting') {
+    playOverlay([{ text: 'VOTE!', sub: 'Who is the imposter?', cls: 'danger', ms: 1500 }]);
+  } else if (v.phase === 'results') {
+    // Reveal the outcome one beat at a time
+    if (REDUCED_MOTION || !prevKey) { resultsStage = 5; return }
+    resultsStage = 0;
+    const rows = v.players.length;
+    [[1, 1500], [2, 3000], [3, 4300], [4, 5200], [5, 5200 + rows * 150 + 900]].forEach(([stage, ms]) => {
+      resultsTimers.push(setTimeout(() => { resultsStage = stage; render() }, ms));
+    });
+  }
+}
+
+function skipResults() {
+  if (resultsStage >= 5) return;
+  resultsTimers.forEach(clearTimeout);
+  resultsTimers = [];
+  resultsStage = 5;
+  render();
+}
+
 function applyView(v) {
   const key = v.round + ':' + v.phase;
   if (key !== phaseKey) {
+    const prevKey = phaseKey;
     phaseKey = key;
     if (v.phase === 'reveal') wordRevealed = false;
     if (v.phase === 'discussion') peekRevealed = false;
     if (v.phase === 'voting' || v.phase === 'lobby') selectedVote = null;
+    onPhaseEnter(v, prevKey);
   }
   view = v;
   timerEnd = v.timerRemaining != null ? Date.now() + v.timerRemaining : 0;
@@ -1344,13 +1580,18 @@ function playerById(id) {
   return (view && view.players.find(p => p.id === id)) || { name: 'Player', num: '?' };
 }
 
-function playerRow(p, extra, cls) {
+function playerRow(p, extra, cls, attrs) {
   const isMe = p.id === myId;
-  return `<div class="player-item ${isMe ? 'is-you' : ''} ${p.online ? '' : 'offline'} ${cls || ''}">
+  return `<div ${attrs || ''} class="player-item ${isMe ? 'is-you' : ''} ${p.online ? '' : 'offline'} ${cls || ''}">
     <div class="player-num">${p.num}</div>
     <div class="player-info"><div class="player-name">${esc(p.name)}</div></div>
     ${extra || ''}
   </div>`;
+}
+
+// "3 of 5 ready" where the number pops each time it changes
+function countHTML(n, total, label) {
+  return `<span class="anim-pop" style="display:inline-block">${n}</span> of ${total} ${label}`;
 }
 
 function render() {
@@ -1362,66 +1603,59 @@ function render() {
   const online = players.filter(p => p.online);
 
   document.getElementById('header-code').textContent = view.code;
-  document.getElementById('header-me').innerHTML = me
-    ? `You are <strong>#${me.num} ${esc(me.name)}</strong>` : '';
+  setHTML(document.getElementById('header-me'), me
+    ? `You are <strong>#${me.num} ${esc(me.name)}</strong>` : '');
 
   if (phase !== 'discussion') stopTimerTick();
 
   switch (phase) {
     case 'lobby': {
       showScreen('lobby');
-      document.getElementById('lobby-code').textContent = view.code;
-      document.getElementById('lobby-count').textContent =
-        players.length + ' player' + (players.length !== 1 ? 's' : '') + ' joined';
+      setHTML(document.getElementById('lobby-code'), view.code.split('').map((ch, i) =>
+        `<span class="anim-pop" style="display:inline-block;--d:${i + 3}">${esc(ch)}</span>`).join(''));
+      setHTML(document.getElementById('lobby-count'),
+        `<span class="anim-pop" style="display:inline-block">${players.length}</span> player${players.length !== 1 ? 's' : ''} joined`);
 
-      document.getElementById('lobby-players').innerHTML = players.map(p => {
+      renderList(document.getElementById('lobby-players'), players.map(p => {
         const isMe = p.id === myId;
         let badges = '';
         if (p.id === view.hostId) badges += '<span class="player-badge badge-host">Host</span>';
         if (isMe) badges += '<span class="player-badge badge-you">You</span>';
         if (!p.online) badges += '<span class="player-badge badge-offline">Offline</span>';
         if (amHost && !isMe) badges += `<button class="kick-btn" title="Remove player" onclick="kickPlayer('${p.id}')">&times;</button>`;
-        return playerRow(p, badges, 'fade-in');
-      }).join('');
+        return { key: p.id, html: playerRow(p, badges) };
+      }));
 
       const settingsEl = document.getElementById('lobby-settings');
       settingsEl.hidden = !amHost;
       if (amHost) {
-        document.getElementById('timer-options').innerHTML = TIMER_OPTS.map(t => {
+        setHTML(document.getElementById('timer-options'), TIMER_OPTS.map(t => {
           const label = t < 120 ? t + 's' : (t / 60) + 'm';
           return `<button class="timer-opt ${t === view.timerDuration ? 'active' : ''}"
             onclick="setTimer(${t})">${label}</button>`;
-        }).join('');
+        }).join(''));
       }
 
       let btns = '';
       if (amHost) {
         const enough = online.length >= MIN_PLAYERS;
-        btns += `<button class="btn btn-primary" onclick="startGame()" ${enough ? '' : 'disabled'}>
+        btns += `<button class="btn btn-primary ${enough ? 'anim-pop' : ''}" onclick="startGame()" ${enough ? '' : 'disabled'}>
           Start Game${enough ? '' : ' (need ' + MIN_PLAYERS + '+)'}</button>`;
         btns += `<button class="btn btn-ghost btn-sm" onclick="endGame()" style="align-self:center">End Game</button>`;
       } else {
-        btns += `<p class="center subtitle">Waiting for the host to start...</p>`;
+        btns += `<p class="center subtitle pulse">Waiting for the host to start...</p>`;
         btns += `<button class="btn btn-ghost btn-sm" onclick="leaveGame()" style="align-self:center">Leave</button>`;
       }
-      document.getElementById('lobby-actions').innerHTML = btns;
+      setHTML(document.getElementById('lobby-actions'), btns);
       break;
     }
 
     case 'reveal': {
       showScreen('reveal');
-      const revealEl = document.getElementById('reveal-word');
-      const hintEl = document.getElementById('reveal-hint');
-      if (wordRevealed) {
-        revealEl.innerHTML = `<div class="word-text">${esc(view.myWord)}</div>`;
-        hintEl.textContent = 'Tap to hide';
-      } else {
-        revealEl.innerHTML = '<div class="word-hidden">???</div>';
-        hintEl.textContent = 'Tap to reveal';
-      }
+      document.getElementById('reveal-word').textContent = view.myWord || '';
+      document.getElementById('reveal-card').classList.toggle('flipped', wordRevealed);
       const readyCount = online.filter(p => view.ready[p.id]).length;
-      document.getElementById('reveal-status').textContent =
-        readyCount + ' of ' + online.length + ' ready';
+      setHTML(document.getElementById('reveal-status'), countHTML(readyCount, online.length, 'ready'));
       const btn = document.getElementById('btn-ready-reveal');
       if (view.ready[myId]) { btn.textContent = 'Waiting for others...'; btn.disabled = true }
       else { btn.textContent = "I'm Ready"; btn.disabled = false }
@@ -1433,17 +1667,17 @@ function render() {
       updateTimer();
       startTimerTick();
 
-      document.getElementById('peek-word').innerHTML = peekRevealed
-        ? `<div class="word-text" style="font-size:1.5rem">${esc(view.myWord)}</div>`
-        : '<div class="word-hidden" style="font-size:1.2rem;letter-spacing:0.2em">Tap to peek</div>';
+      setHTML(document.getElementById('peek-word'), peekRevealed
+        ? `<div class="word-text anim-pop" style="font-size:1.5rem">${esc(view.myWord)}</div>`
+        : '<div class="word-hidden" style="font-size:1.2rem;letter-spacing:0.2em">Tap to peek</div>');
 
-      document.getElementById('discussion-players').innerHTML = players.map(p => {
+      renderList(document.getElementById('discussion-players'), players.map(p => {
         let badges = '';
-        if (view.ready[p.id]) badges += '<span class="player-badge badge-ready">Ready</span>';
+        if (view.ready[p.id]) badges += '<span class="player-badge badge-ready anim-pop">Ready</span>';
         else if (p.id === myId) badges += '<span class="player-badge badge-you">You</span>';
         if (!p.online) badges += '<span class="player-badge badge-offline">Offline</span>';
-        return playerRow(p, badges);
-      }).join('');
+        return { key: p.id, html: playerRow(p, badges) };
+      }));
 
       const btn = document.getElementById('btn-ready-vote');
       const readyCount = online.filter(p => view.ready[p.id]).length;
@@ -1457,25 +1691,24 @@ function render() {
       showScreen('voting');
       if (view.myVote) selectedVote = view.myVote;
 
-      document.getElementById('voting-players').innerHTML = players.filter(p => p.id !== myId).map(p => {
-        const badges = view.voted[p.id] ? '<span class="player-badge badge-voted">Voted</span>' : '';
+      renderList(document.getElementById('voting-players'), players.filter(p => p.id !== myId).map(p => {
+        const badges = view.voted[p.id] ? '<span class="player-badge badge-voted anim-pop">Voted</span>' : '';
         const cls = (view.myVote ? '' : 'selectable ') + (selectedVote === p.id ? 'selected' : '');
-        return playerRow(p, badges, cls).replace('<div class="player-item',
-          `<div onclick="selectVote('${p.id}')" class="player-item`);
-      }).join('');
+        return { key: p.id, html: playerRow(p, badges, cls, `onclick="selectVote('${p.id}')"`) };
+      }));
 
       const voteCount = online.filter(p => view.voted[p.id]).length;
-      document.getElementById('voting-status').textContent =
-        voteCount + ' of ' + online.length + ' voted';
+      setHTML(document.getElementById('voting-status'), countHTML(voteCount, online.length, 'voted'));
 
       const btn = document.getElementById('btn-vote');
-      if (view.myVote) { btn.textContent = 'Vote submitted'; btn.disabled = true }
+      if (view.myVote) { btn.textContent = 'Vote locked in'; btn.disabled = true }
       else { btn.textContent = 'Confirm Vote'; btn.disabled = !selectedVote }
       break;
     }
 
     case 'results': {
       showScreen('results');
+      const stage = resultsStage;
       const votes = view.votes || {};
       const tally = {};
       players.forEach(p => tally[p.id] = 0);
@@ -1488,48 +1721,53 @@ function render() {
       });
       const caught = maxVotes > 0 && mostVoted.length === 1 && mostVoted[0] === view.imposterId;
       const imp = playerById(view.imposterId);
-      const impLabel = '#' + imp.num + ' ' + imp.name;
 
       const bannerEl = document.getElementById('result-banner');
-      if (caught) {
-        bannerEl.className = 'result-banner win fade-in';
-        bannerEl.innerHTML = `<h1 class="accent-text">CAUGHT!</h1>
-          <p>The imposter <strong>${esc(impLabel)}</strong> was found out</p>`;
+      if (stage === 0) {
+        setHTML(bannerEl, '<div class="suspense pulse" onclick="skipResults()">The votes are in...</div>');
+      } else if (stage === 1) {
+        setHTML(bannerEl, '<div class="suspense pulse anim-pop" onclick="skipResults()">The imposter was...</div>');
       } else {
-        bannerEl.className = 'result-banner lose fade-in';
-        bannerEl.innerHTML = `<h1 class="danger-text">ESCAPED!</h1>
-          <p>The imposter <strong>${esc(impLabel)}</strong> got away</p>`;
+        setHTML(bannerEl, `<div class="result-banner ${caught ? 'win' : 'lose'} anim-pop">
+          <div class="imposter-reveal">
+            <div class="player-num">${imp.num}</div>
+            <div class="imp-name">${esc(imp.name)}</div>
+          </div>
+          <h1 class="${caught ? 'accent-text' : 'danger-text'}" style="margin-top:12px">${caught ? 'CAUGHT!' : 'ESCAPED!'}</h1>
+          <p>${caught ? 'The group found the imposter' : 'The imposter got away with it'}</p>
+        </div>`);
       }
 
-      document.getElementById('result-words').innerHTML = `
-        <div class="word-box civilian">
+      setHTML(document.getElementById('result-words'), stage < 3 ? '' : `
+        <div class="word-box civilian anim-pop" style="--d:0">
           <div class="word-box-label">Civilian Word</div>
           <div class="word-box-text">${esc(view.civilianWord)}</div>
         </div>
-        <div class="word-box imposter">
+        <div class="word-box imposter anim-pop" style="--d:3">
           <div class="word-box-label">Imposter Word</div>
           <div class="word-box-text">${esc(view.imposterWord)}</div>
-        </div>`;
+        </div>`);
 
+      document.getElementById('result-votes-title').hidden = stage < 4;
       const total = Object.keys(votes).length || 1;
-      document.getElementById('result-votes').innerHTML = players
+      renderList(document.getElementById('result-votes'), stage < 4 ? [] : players
         .map(p => ({ p, n: tally[p.id] || 0 }))
         .sort((a, b) => b.n - a.n)
         .map(({ p, n }) => {
           const isImp = p.id === view.imposterId;
-          return `<div class="vote-row ${isImp ? 'is-imposter' : ''}">
+          return { key: p.id, html: `<div class="vote-row ${isImp ? 'is-imposter' : ''}">
             <span class="vote-count">${n}</span>
             <span style="flex:1;font-weight:600">#${p.num} ${esc(p.name)}
               ${isImp ? ' <span class="player-badge badge-imposter" style="font-size:0.65rem;vertical-align:middle">Imposter</span>' : ''}</span>
             <div class="vote-bar" style="width:80px"><div class="vote-bar-fill" style="width:${(n / total) * 100}%"></div></div>
-          </div>`;
-        }).join('');
+          </div>` };
+        }));
 
-      document.getElementById('result-actions').innerHTML = amHost
-        ? `<button class="btn btn-primary" onclick="playAgain()">Play Again</button>
-           <button class="btn btn-ghost btn-sm" onclick="endGame()" style="align-self:center">End Game</button>`
-        : `<p class="center subtitle">Waiting for host to start next round...</p>
-           <button class="btn btn-ghost btn-sm" onclick="leaveGame()" style="align-self:center">Leave</button>`;
+      setHTML(document.getElementById('result-actions'), stage < 5 ? '' : amHost
+        ? `<button class="btn btn-primary anim-pop" onclick="playAgain()">Play Again</button>
+           <button class="btn btn-ghost btn-sm anim-pop" style="align-self:center;--d:2" onclick="endGame()">End Game</button>`
+        : `<p class="center subtitle anim-pop">Waiting for host to start next round...</p>
+           <button class="btn btn-ghost btn-sm anim-pop" style="align-self:center;--d:2" onclick="leaveGame()">Leave</button>`);
       break;
     }
   }
@@ -1559,6 +1797,7 @@ function updateTimer() {
   digitsEl.style.color = secs <= 10 ? 'var(--danger)' : '';
   progressEl.style.strokeDashoffset = 2 * Math.PI * 72 * (1 - remaining / total);
   progressEl.classList.toggle('low', secs <= 10);
+  digitsEl.classList.toggle('low', secs <= 10 && secs > 0);
 }
 
 // Utils
